@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Truy Tìm Kho Báu Hóa Học</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        pink: {
+                            50: '#fdf2f8', 100: '#fce7f3', 200: '#fbcfe8',
+                            300: '#f9a8d4', 400: '#f472b6', 500: '#ec4899',
+                            600: '#db2777', 700: '#be185d', 800: '#9d174d',
+                            900: '#831843',
+                        }
+                    },
+                    animation: {
+                        'bounce-slow': 'bounce 2s infinite',
+                        'pulse-fast': 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'float': 'float 3s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: linear-gradient(135deg, #fbcfe8 0%, #f472b6 100%);
+            min-height: 100vh;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(12px);
+            border: 2px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 10px 40px rgba(219, 39, 119, 0.2);
+        }
+        .treasure-glow {
+            box-shadow: 0 0 40px #f472b6, 0 0 80px #f9a8d4;
+            animation: pulse-glow 2s infinite;
+        }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 40px #f472b6, 0 0 80px #f9a8d4; }
+            50% { box-shadow: 0 0 60px #ec4899, 0 0 100px #f472b6; }
+        }
+        .option-btn { transition: all 0.2s ease-in-out; }
+        .option-btn:active { transform: scale(0.98); }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        const playSound = (type) => {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            if (type === 'correct') {
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
+                oscillator.frequency.exponentialRampToValueAtTime(1046.50, audioCtx.currentTime + 0.1); // C6
+                gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+                oscillator.start(audioCtx.currentTime);
+                oscillator.stop(audioCtx.currentTime + 0.5);
+            } else if (type === 'wrong') {
+                oscillator.type = 'sawtooth';
+                oscillator.frequency.setValueAtTime(150, audioCtx.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.3);
+                gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                oscillator.start(audioCtx.currentTime);
+                oscillator.stop(audioCtx.currentTime + 0.3);
+            } else if (type === 'win') {
+                oscillator.type = 'triangle';
+                [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
+                    setTimeout(() => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        osc.frequency.value = freq;
+                        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+                        osc.start(audioCtx.currentTime);
+                        osc.stop(audioCtx.currentTime + 0.5);
+                    }, i * 150);
+                });
+            }
+        };
+
+        const questionsData = [
+            {
+                title: "Vòng 1: Khởi động (Mức độ Nhận biết)",
+                medal: "🥉",
+                medalName: "Huy Chương Đồng",
+                questions: [
+                    { q: "Trong các chất sau, chất nào KHÔNG phải là ester?", options: ["HCOOC2H5", "C2H5CHO", "CH3COOCH=CH2", "CH3COOCH3"], ans: 1 },
+                    { q: "Ester no, đơn chức, mạch hở có công thức tổng quát là:", options: ["CnH2nO2 (n ≥ 2)", "CnH2n-2O2 (n ≥ 2)", "CnH2n+2O2 (n ≥ 2)", "CnH2nO (n ≥ 2)"], ans: 0 },
+                    { q: "Tên gọi của ester CH3COOCH3 là:", options: ["ethyl acetate", "methyl propionate", "methyl acetate", "ethyl formate"], ans: 2 },
+                    { q: "Chất béo là triester của gốc acid béo với:", options: ["ethylene glycol", "glycerol", "ethanol", "phenol"], ans: 1 },
+                    { q: "Công thức của stearic acid là:", options: ["C15H31COOH", "CH3COOH", "C17H35COOH", "C17H33COOH"], ans: 2 },
+                    { q: "Thành phần chính của sáp ong là triacontanyl palmitate. Ester này thuộc loại:", options: ["không no, đơn chức", "không no, đa chức", "no, đơn chức", "no, đa chức"], ans: 2 },
+                    { q: "Carbohydrate nào sau đây thuộc nhóm polysaccharide?", options: ["Glucose và Fructose", "Maltose và Saccharose", "Tinh bột và Cellulose", "Glucose và Tinh bột"], ans: 2 },
+                    { q: "Chất nào sau đây thuộc loại monosaccharide?", options: ["Tinh bột", "Cellulose", "Fructose", "Saccharose"], ans: 2 },
+                    { q: "Trong phân tử acid béo omega-3, liên kết đôi đầu tiên nằm ở vị trí carbon số mấy (tính từ nhóm -CH3)?", options: ["1", "3", "6", "9"], ans: 1 },
+                    { q: "Công thức phân tử tổng quát của ester tạo bởi alcohol no, đơn chức và acid không no (1 nối đôi C=C) đơn chức là:", options: ["CnH2nO2 (n≥2)", "CnH2n+2O2 (n≥3)", "CnH2n-2O2 (n≥4)", "CnH2nO2 (n≥4)"], ans: 2 }
+                ]
+            },
+            {
+                title: "Vòng 2: Vượt Chướng Ngại Vật (Mức độ Thông hiểu)",
+                medal: "🥈",
+                medalName: "Huy Chương Bạc",
+                questions: [
+                    { q: "So với các acid, alcohol có cùng số C thì ester có nhiệt độ sôi thấp hơn do:", options: ["Khối lượng phân tử nhỏ hơn", "Không có liên kết hydrogen giữa các phân tử", "Có liên kết hydrogen bền vững", "Dễ bay hơi hơn"], ans: 1 },
+                    { q: "Phản ứng xà phòng hóa chất béo là:", options: ["Phản ứng thuận nghịch", "Phản ứng một chiều", "Phản ứng thế", "Phản ứng cộng"], ans: 1 },
+                    { q: "Chất béo ở trạng thái lỏng (dầu thực vật) chủ yếu chứa:", options: ["Gốc acid béo không no", "Glycerol tự do", "Gốc acid béo no", "Gốc hydrocarbon vòng"], ans: 0 },
+                    { q: "Benzyl acetate là ester có mùi thơm của hoa gì?", options: ["Hoa nhài", "Hoa hồng", "Dứa chín", "Chuối chín"], ans: 0 },
+                    { q: "Isoamyl acetate có mùi đặc trưng của:", options: ["Táo", "Lê", "Hoa nhài", "Chuối chín"], ans: 3 },
+                    { q: "Thủy phân tristearin trong dung dịch NaOH đun nóng, thu được:", options: ["C17H35COONa và glycerol", "C17H33COONa và glycerol", "C15H31COONa và ethanol", "CH3COONa và glycerol"], ans: 0 },
+                    { q: "Glucose và Fructose đều có khả năng tham gia phản ứng:", options: ["Thủy phân", "Tráng bạc", "Trùng hợp", "Màu biuret"], ans: 1 },
+                    { q: "Thành phần chủ yếu của xà phòng là:", options: ["Muối sodium hoặc potassium của acid béo", "Muối sulfate của acid béo", "Glycerol và acid béo", "Chất giặt rửa tổng hợp"], ans: 0 },
+                    { q: "Ưu điểm của chất giặt rửa tổng hợp so với xà phòng là:", options: ["Dễ bị phân hủy sinh học", "Giá thành rẻ hơn", "Dùng được với nước cứng", "Không bọt"], ans: 2 },
+                    { q: "Điểm khác biệt về cấu trúc giữa Tinh bột và Cellulose là:", options: ["Tinh bột mạch phân nhánh (amylopectin), cellulose mạch thẳng", "Cellulose mạch phân nhánh, tinh bột mạch thẳng", "Cả hai đều mạch vòng", "Cả hai đều không phân nhánh"], ans: 0 }
+                ]
+            },
+            {
+                title: "Vòng 3: Tăng Tốc (Mức độ Vận dụng)",
+                medal: "🥇",
+                medalName: "Huy Chương Vàng",
+                questions: [
+                    { q: "Ester nào sau đây được sử dụng để điều chế thủy tinh hữu cơ?", options: ["Methyl methacrylate", "Methyl acetate", "Ethyl methacrylate", "Vinyl acetate"], ans: 0 },
+                    { q: "Hợp chất C3H6O2 có bao nhiêu đồng phân ester?", options: ["1", "2", "3", "4"], ans: 1 },
+                    { q: "Đun nóng phenyl acetate (CH3COOC6H5) với lượng dư NaOH, thu được sản phẩm là:", options: ["CH3COONa và C6H5OH", "CH3OH và C6H5ONa", "CH3COONa và C6H5ONa", "CH3COOH và C6H5ONa"], ans: 2 },
+                    { q: "Dầu mỡ khi để lâu thường có mùi ôi khét. Nguyên nhân chính là do:", options: ["Bị thủy phân", "Bị xà phòng hóa", "Gốc acid béo không no bị oxi hóa", "Gốc acid no bị bão hòa"], ans: 2 },
+                    { q: "Trong công nghiệp, người ta chuyển dầu thực vật lỏng thành bơ nhân tạo (rắn) bằng phản ứng:", options: ["Hydrogen hóa", "Oxi hóa", "Xà phòng hóa", "Trùng hợp"], ans: 0 },
+                    { q: "Thủy phân ethyl formate (HCOOC2H5) trong môi trường kiềm (tỉ lệ vừa đủ), hiện tượng quan sát được sau phản ứng là:", options: ["Hỗn hợp tách 2 lớp", "Hỗn hợp đồng nhất", "Sinh ra kết tủa", "Có khí bay lên"], ans: 1 },
+                    { q: "Đun nóng dung dịch glucose với Cu(OH)2 trong môi trường kiềm thu được hiện tượng gì?", options: ["Kết tủa trắng", "Kết tủa đỏ gạch", "Dung dịch xanh lam", "Dung dịch mất màu"], ans: 1 },
+                    { q: "Khi nhỏ dung dịch iodine vào hồ tinh bột, xuất hiện màu gì?", options: ["Đỏ", "Vàng", "Xanh tím", "Hồng"], ans: 2 },
+                    { q: "Không nên dùng xà phòng khi giặt rửa với nước cứng vì:", options: ["Tạo kết tủa với Ca2+, Mg2+ làm giảm tác dụng", "Làm mục sợi vải", "Xà phòng bay hơi nhanh", "Gây ô nhiễm mạnh"], ans: 0 },
+                    { q: "Tơ acetate được điều chế bằng cách cho cellulose tác dụng với chất nào?", options: ["Acetic acid", "Acetic anhydride", "Methyl alcohol", "NaOH đặc"], ans: 1 }
+                ]
+            },
+            {
+                title: "Vòng 4: Về Đích (Mức độ Vận dụng cao)",
+                medal: "💎",
+                medalName: "Kho Báu Trí Tuệ",
+                questions: [
+                    { q: "Thủy phân hoàn toàn 89 gam tristearin trong dung dịch NaOH dư, đun nóng. Khối lượng muối thu được là:", options: ["85,3 gam", "91,8 gam", "92,6 gam", "104,5 gam"], ans: 1 },
+                    { q: "Cho 12 gam acetic acid phản ứng với 12 gam ethanol (H2SO4 đặc, đun nóng), thu được 8 gam ester. Hiệu suất phản ứng là:", options: ["45,5%", "60,0%", "75,0%", "80,0%"], ans: 0 },
+                    { q: "Lên men 90 kg glucose thu được V lít ethyl alcohol (D = 0,8 g/mL) với hiệu suất 80%. Giá trị của V là:", options: ["46 lít", "57,5 lít", "23 lít", "71,9 lít"], ans: 0 },
+                    { q: "Hợp chất hữu cơ X (C8H12O5) tác dụng dư NaOH, thu được glycerol và hai muối Y, Z (MY < MZ). Cả Y, Z đều không tráng bạc. Y là:", options: ["HCOONa", "CH3COONa", "C2H3COONa", "C2H5COONa"], ans: 1 },
+                    { q: "Để sản xuất 2 triệu viên thuốc aspirin (chứa 81 mg aspirin/viên), với hiệu suất 75%, khối lượng salicylic acid tối thiểu cần dùng gần nhất với:", options: ["166 kg", "288 kg", "997 kg", "150 kg"], ans: 0 },
+                    { q: "Dãy nào sau đây sắp xếp theo chiều nhiệt độ sôi GIẢM dần?", options: ["Acetic acid > Ethyl alcohol > Methyl formate", "Acetic acid > Methyl formate > Ethyl alcohol", "Ethyl alcohol > Acetic acid > Methyl formate", "Methyl formate > Ethyl alcohol > Acetic acid"], ans: 0 },
+                    { q: "Trong công nghiệp sản xuất đường ăn, người ta tách lấy saccharose từ nước ép mía bằng phương pháp nào?", options: ["Chiết", "Kết tinh", "Chưng cất", "Sắc kí"], ans: 1 },
+                    { q: "Thủy phân ester X (C4H8O2) trong NaOH thu được sodium formate và chất hữu cơ Y. Số CTCT thỏa mãn của X là:", options: ["1", "2", "3", "4"], ans: 1 },
+                    { q: "Trong phân tử dạng mạch vòng α-glucose, nhóm -OH hemiacetal là -OH gắn ở carbon số mấy?", options: ["1", "2", "5", "6"], ans: 0 },
+                    { q: "Saccharose octaacetate có công thức C28H38O19. Phân tử khối của hợp chất này là:", options: ["578", "678", "778", "878"], ans: 1 }
+                ]
+            }
+        ];
+
+        const { useState, useEffect, useRef } = React;
+
+        const App = () => {
+            const [gameState, setGameState] = useState('start'); 
+            const [playerName, setPlayerName] = useState('');
+            const [round, setRound] = useState(0);
+            const [questionIdx, setQuestionIdx] = useState(0);
+            const [score, setScore] = useState(0);
+            const [selectedAns, setSelectedAns] = useState(null);
+            const [isCorrect, setIsCorrect] = useState(null);
+            const [musicPlaying, setMusicPlaying] = useState(false);
+            const audioRef = useRef(null);
+
+            const handleStart = (e) => {
+                e.preventDefault();
+                if (playerName.trim() === '') {
+                    alert('Bạn hãy nhập tên để bắt đầu hành trình nhé!');
+                    return;
+                }
+                setGameState('intro');
+                if (musicPlaying && audioRef.current) audioRef.current.play();
+            };
+
+            const toggleMusic = () => {
+                setMusicPlaying(!musicPlaying);
+                if (!musicPlaying && audioRef.current) {
+                    audioRef.current.play();
+                } else if (audioRef.current) {
+                    audioRef.current.pause();
+                }
+            };
+
+            const handleAnswer = (index) => {
+                if (selectedAns !== null) return; 
+                
+                setSelectedAns(index);
+                const correct = index === questionsData[round].questions[questionIdx].ans;
+                setIsCorrect(correct);
+                
+                if (correct) {
+                    setScore(prev => prev + 1);
+                    playSound('correct');
+                } else {
+                    playSound('wrong');
+                }
+
+                setTimeout(() => {
+                    if (questionIdx < 9) {
+                        setQuestionIdx(prev => prev + 1);
+                        setSelectedAns(null);
+                        setIsCorrect(null);
+                    } else {
+                        playSound('win');
+                        if (round < 3) {
+                            setGameState('round_end');
+                        } else {
+                            setGameState('game_over');
+                        }
+                    }
+                }, 1500); // 1.5s delay to see the result
+            };
+
+            const nextRound = () => {
+                setRound(prev => prev + 1);
+                setQuestionIdx(0);
+                setSelectedAns(null);
+                setIsCorrect(null);
+                setGameState('intro');
+            };
+
+            const resetGame = () => {
+                setGameState('start');
+                setPlayerName('');
+                setRound(0);
+                setQuestionIdx(0);
+                setScore(0);
+                setSelectedAns(null);
+                setIsCorrect(null);
+            };
+
+            if (gameState === 'start') {
+                return (
+                    <div className="min-h-screen flex items-center justify-center p-4">
+                        <div className="glass-panel rounded-3xl p-10 max-w-md w-full text-center relative overflow-hidden">
+                            <div className="absolute top-0 left-0 w-full h-3 bg-pink-500"></div>
+                            <h1 className="text-4xl font-black text-pink-700 mb-3 drop-shadow-sm">TRUY TÌM<br/>KHO BÁU</h1>
+                            <p className="text-pink-600 mb-8 font-semibold text-lg">Chinh phục Ester, Lipid & Carbohydrate</p>
+                            
+                            <div className="text-6xl mb-8 animate-float">💎🧭🧪</div>
+
+                            <form onSubmit={handleStart} className="space-y-5">
+                                <input 
+                                    type="text" 
+                                    placeholder="Nhập tên người chơi..." 
+                                    className="w-full px-5 py-4 rounded-2xl border-2 border-pink-300 focus:border-pink-500 focus:outline-none text-center text-xl text-gray-700 placeholder-pink-300 bg-white/80 font-medium shadow-inner"
+                                    value={playerName}
+                                    onChange={e => setPlayerName(e.target.value)}
+                                />
+                                <button type="submit" className="w-full bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white font-bold py-4 px-4 rounded-2xl shadow-xl transition-all transform hover:scale-105 active:scale-95 text-xl tracking-wide">
+                                    BẮT ĐẦU CHƠI <i className="fas fa-play ml-2"></i>
+                                </button>
+                            </form>
+
+                            <button onClick={toggleMusic} className="mt-8 text-sm text-pink-700 hover:text-pink-900 font-bold flex items-center justify-center mx-auto transition-colors bg-pink-100 px-4 py-2 rounded-full">
+                                <i className={`fas ${musicPlaying ? 'fa-volume-up' : 'fa-volume-mute'} mr-2`}></i> 
+                                {musicPlaying ? 'Đang phát nhạc nền' : 'Bật nhạc nền'}
+                            </button>
+                        </div>
+                        {/* Nhạc nền Lofi không bản quyền từ Pixabay */}
+                        <audio ref={audioRef} loop src="https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3"></audio>
+                    </div>
+                );
+            }
+
+            if (gameState === 'intro') {
+                return (
+                    <div className="min-h-screen flex items-center justify-center p-4">
+                        <div className="glass-panel rounded-3xl p-12 max-w-lg w-full text-center animate-pulse-fast" style={{animationIterationCount: 1}}>
+                            <h2 className="text-4xl font-extrabold text-pink-700 mb-6 drop-shadow-sm">{questionsData[round].title}</h2>
+                            <div className="text-8xl mb-8 animate-bounce-slow">{questionsData[round].medal}</div>
+                            <p className="text-xl text-gray-700 mb-10 font-medium">Hãy trả lời đúng 10 câu hỏi để mang về <b>{questionsData[round].medalName}</b> nhé, <span className="text-pink-600 font-bold">{playerName}</span>!</p>
+                            <button onClick={() => setGameState('playing')} className="bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white font-bold py-4 px-10 rounded-full shadow-xl transition-transform transform hover:scale-110 text-2xl">
+                                Sẵn sàng! <i className="fas fa-rocket ml-2"></i>
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (gameState === 'round_end') {
+                return (
+                    <div className="min-h-screen flex items-center justify-center p-4">
+                        <div className="glass-panel rounded-3xl p-12 max-w-lg w-full text-center">
+                            <h2 className="text-4xl font-black text-pink-700 mb-4">Tuyệt vời, {playerName}!</h2>
+                            <p className="text-xl text-gray-700 mb-8 font-medium">Bạn đã vượt qua thử thách của {questionsData[round].title.split(':')[0]}</p>
+                            
+                            <div className="text-9xl mb-8 animate-bounce">{questionsData[round].medal}</div>
+                            <h3 className="text-3xl font-bold text-pink-600 mb-10 leading-relaxed">Bạn nhận được: <br/> <span className="text-4xl text-yellow-500 drop-shadow-md">{questionsData[round].medalName}</span></h3>
+                            
+                            <div className="bg-pink-100 rounded-2xl p-4 mb-8">
+                                <p className="text-2xl font-bold text-gray-800">Điểm hiện tại: <span className="text-pink-600 text-3xl">{score}</span> / 40</p>
+                            </div>
+
+                            <button onClick={nextRound} className="bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white font-bold py-4 px-10 rounded-full shadow-xl transition-transform transform hover:scale-110 text-xl w-full">
+                                Tiến tới Vòng tiếp theo <i className="fas fa-arrow-right ml-2"></i>
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (gameState === 'game_over') {
+                return (
+                    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-400 to-purple-500 p-4">
+                        <div className="glass-panel rounded-[2.5rem] p-12 max-w-2xl w-full text-center relative treasure-glow border-4 border-yellow-300 bg-white/95">
+                            <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-600 to-purple-600 mb-4 drop-shadow-sm">CHÚC MỪNG CHIẾN THẮNG!</h1>
+                            <p className="text-2xl text-gray-800 mb-8 font-medium">Bạn là một chuyên gia Hóa học thực thụ, <span className="text-pink-600 font-bold">{playerName}</span>!</p>
+                            
+                            <div className="text-9xl mb-8 animate-bounce drop-shadow-xl">🎁</div>
+                            <h2 className="text-4xl font-black text-yellow-500 mb-4 drop-shadow-md">KHO BÁU TRÍ TUỆ</h2>
+                            
+                            <div className="bg-pink-50 rounded-3xl p-8 mb-10 mt-6 border-2 border-pink-200">
+                                <p className="text-2xl font-bold text-gray-800 mb-3">Tổng kết điểm số:</p>
+                                <p className="text-7xl font-black text-pink-600 drop-shadow-sm">{score} <span className="text-4xl text-gray-400">/ 40</span></p>
+                                <p className="mt-6 text-xl font-semibold text-gray-700 leading-relaxed">
+                                    {score === 40 ? "Hoàn hảo! Bạn đã trả lời đúng tất cả các câu hỏi!" : 
+                                     score >= 30 ? "Xuất sắc! Kiến thức của bạn rất vững vàng." : 
+                                     score >= 20 ? "Khá lắm! Hãy ôn tập thêm một chút để đạt điểm tối đa nhé." : 
+                                     "Cố gắng hơn nữa trong lần chơi sau nhé!"}
+                                </p>
+                            </div>
+
+                            <button onClick={resetGame} className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-bold py-4 px-12 rounded-full shadow-2xl transition-transform transform hover:scale-110 text-2xl tracking-wide">
+                                Chơi Lại Từ Đầu <i className="fas fa-redo ml-2"></i>
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+
+            const currentQ = questionsData[round].questions[questionIdx];
+            const progressPercent = ((questionIdx + (round * 10)) / 40) * 100;
+
+            return (
+                <div className="min-h-screen flex flex-col">
+                    {/* Header */}
+                    <div className="bg-white/90 backdrop-blur-md shadow-sm p-4 md:p-5 flex justify-between items-center sticky top-0 z-10 border-b border-pink-100">
+                        <div className="font-bold text-pink-600 flex items-center text-lg md:text-xl">
+                            <i className="fas fa-user-graduate mr-3 bg-pink-100 p-2 rounded-full"></i> {playerName}
+                        </div>
+                        <div className="text-2xl font-black text-pink-700 flex items-center">
+                            <i className="fas fa-star text-yellow-400 mr-2 drop-shadow-sm"></i> {score} Điểm
+                        </div>
+                        <div className="font-bold text-gray-600 text-lg md:text-xl hidden md:block border-l-2 border-pink-200 pl-4">
+                            {questionsData[round].medal} {questionsData[round].title.split(':')[0]}
+                        </div>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="w-full bg-pink-100 h-3">
+                        <div className="bg-gradient-to-r from-pink-400 to-pink-600 h-3 transition-all duration-500 ease-out rounded-r-full shadow-sm" style={{width: `${progressPercent}%`}}></div>
+                    </div>
+
+                    {/* Question Area */}
+                    <div className="flex-grow flex items-center justify-center p-4 md:p-8">
+                        <div className="glass-panel rounded-3xl p-6 md:p-12 max-w-4xl w-full">
+                            <div className="mb-10 flex flex-col md:flex-row items-start md:items-center">
+                                <div className="bg-pink-600 text-white rounded-2xl px-6 py-3 text-2xl font-black mr-6 shadow-lg shrink-0 mb-4 md:mb-0">
+                                    Câu {questionIdx + 1}
+                                </div>
+                                <h2 className="text-2xl md:text-3xl font-bold text-gray-800 leading-relaxed">
+                                    {currentQ.q}
+                                </h2>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                                {currentQ.options.map((opt, idx) => {
+                                    let btnClass = "bg-white border-2 border-pink-100 text-gray-700 hover:bg-pink-50 hover:border-pink-300 hover:shadow-md";
+                                    let letterClass = "bg-pink-100 text-pink-600";
+                                    
+                                    if (selectedAns !== null) {
+                                        if (idx === currentQ.ans) {
+                                            btnClass = "bg-green-500 border-green-600 text-white transform scale-[1.03] shadow-xl z-10"; // Correct
+                                            letterClass = "bg-white/30 text-white";
+                                        } else if (idx === selectedAns) {
+                                            btnClass = "bg-red-500 border-red-600 text-white shadow-inner"; // Wrong pick
+                                            letterClass = "bg-white/30 text-white";
+                                        } else {
+                                            btnClass = "bg-gray-50 border-gray-200 text-gray-400 opacity-60"; // Unpicked
+                                            letterClass = "bg-gray-200 text-gray-400";
+                                        }
+                                    }
+
+                                    return (
+                                        <button 
+                                            key={idx}
+                                            disabled={selectedAns !== null}
+                                            onClick={() => handleAnswer(idx)}
+                                            className={`option-btn p-5 md:p-6 rounded-2xl font-semibold text-lg md:text-xl text-left flex items-center ${btnClass}`}
+                                        >
+                                            <span className={`inline-flex w-10 h-10 items-center justify-center rounded-full mr-4 shrink-0 text-lg ${letterClass}`}>
+                                                {String.fromCharCode(65 + idx)}
+                                            </span>
+                                            <span className="leading-snug">{opt}</span>
+                                            
+                                            {selectedAns !== null && idx === currentQ.ans && <i className="fas fa-check-circle ml-auto text-3xl text-white drop-shadow-md animate-bounce"></i>}
+                                            {selectedAns === idx && idx !== currentQ.ans && <i className="fas fa-times-circle ml-auto text-3xl text-white drop-shadow-md"></i>}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Feedback messages */}
+                            <div className="h-16 mt-8 flex items-center justify-center">
+                                {selectedAns !== null && (
+                                    <div className={`px-8 py-3 rounded-full text-2xl font-bold shadow-md animate-bounce ${isCorrect ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                                        {isCorrect ? "✅ Tuyệt vời! +1 Điểm" : "❌ Tiếc quá, chưa chính xác rồi!"}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
